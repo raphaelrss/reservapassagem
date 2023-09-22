@@ -28,7 +28,7 @@ class Pagamento(Base):
     __tablename__ = "pagamento"
     id = Column(Integer, primary_key=True, index=True)
     reserva_id = Column(Integer, ForeignKey("reserva.id"))
-    cidade = Column(Float)
+    valor = Column(Float)
     tipo = Column(String)
     status = Column(String)
 
@@ -45,8 +45,8 @@ class Voo(Base):
     preco = Column(Float)
     numero_voo = Column(String)
 
-    origem = relationship("Aeroporto")
-    destino = relationship("Aeroporto")
+    origem = relationship("Aeroporto", primaryjoin="Voo.origem_id == foreign(Aeroporto.id)")
+    destino = relationship("Aeroporto", primaryjoin="Voo.destino_id == foreign(Aeroporto.id)")
 
 
 class Reserva(Base):
@@ -57,6 +57,6 @@ class Reserva(Base):
     data = Column(DateTime(timezone=True), server_default=func.now())
     status = Column(String)
 
-    usuario = relationship("Usuario")
+    usuario = relationship("Usuario", primaryjoin="foreign(Reserva.usuario_id) == Usuario.id")
     voo = relationship("Voo")
 
