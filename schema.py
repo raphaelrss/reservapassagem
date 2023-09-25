@@ -1,12 +1,15 @@
 import datetime
 from typing import Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
+
+from security import get_password_hash
 
 class Usuario(BaseModel):
     nome: str
     sobrenome: str
     email: str
     cpf: str
+    hash_password: str
     adm: bool
 
     class Config:
@@ -18,10 +21,47 @@ class UsuarioEdit(BaseModel):
     sobrenome: Optional[str] = Field(None, description="Who sends the error message.")
     email: Optional[str] = Field(None, description="Who sends the error message.")
     cpf: Optional[str] = Field(None, description="Who sends the error message.")
+    hash_password: Optional[str] = Field(None, description="Who sends the error message.")
     adm: Optional[bool] = Field(None, description="Who sends the error message.")
 
     class Config:
         orm_mode = True
+
+
+class UsuarioResponse(BaseModel):
+    nome: str
+    sobrenome: str
+    email: str
+    cpf: str
+    adm: bool
+
+
+class UsuarioCreateRequest(BaseModel):
+    nome: str
+    sobrenome: str
+    cpf: str
+    email: str
+    hash_password: str = Field(alias='password')
+    adm: bool
+
+    @validator('hash_password', pre=True)
+    def hash_the_password(cls, v):
+        return get_password_hash(v)
+
+
+class UsuarioUpdateRequest(BaseModel):
+    nome: Optional[str] = None
+    sobrenome: Optional[str] = None
+    cpf: Optional[str] = None
+    adm: Optional[str] = None
+    email: Optional[str] = None
+    hash_password: Optional[str] = Field(alias='password', default=None)
+
+    @validator('hash_password', pre=True)
+    def hash_the_password(cls, v):
+        if v:
+            return get_password_hash(v)
+        return v
 
 
 class Aeroporto(BaseModel):

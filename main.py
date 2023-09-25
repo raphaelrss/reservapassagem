@@ -1,13 +1,16 @@
 import os
+from typing import List
 
 import uvicorn
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, Form, HTTPException
 from fastapi_sqlalchemy import DBSessionMiddleware, db
+from depends import get_usuario_logado
 
 from models import Usuario, Aeroporto, Pagamento, Voo, Reserva
-from schema import Usuario as UsuarioSchema, Aeroporto as AeroportoSchema, Pagamento as PagamentoSchema, Voo as VooSchema, Reserva as ReservaSchema
+from schema import UsuarioCreateRequest, Usuario as UsuarioSchema, Aeroporto as AeroportoSchema, Pagamento as PagamentoSchema, UsuarioResponse, UsuarioUpdateRequest, Voo as VooSchema, Reserva as ReservaSchema
 from schema import UsuarioEdit as UsuarioEditSchema, AeroportoEdit as AeroportoEditSchema, VooEdit as VooEditSchema, ReservaEdit as ReservaEditSchema
+from security import criar_token_jwt, verify_password
 
 load_dotenv(".env")
 
@@ -21,22 +24,23 @@ async def root():
     return {"message": "Hello World"}
 
 
-@app.get("/usuarios/")
-async def usuarios():
+@app.get("/usuarios/", response_model=List[UsuarioResponse])
+async def usuarios(usuario_logado: Usuario = Depends(get_usuario_logado)):
     usuarios = db.session.query(Usuario).all()
     return usuarios
 
 
-@app.post("/usuarios/create/", response_model=UsuarioSchema)
-async def create_usuario(usuario: UsuarioSchema):
-    db_usuario = Usuario(nome=usuario.nome, sobrenome=usuario.sobrenome, email=usuario.email, cpf=usuario.cpf, adm=usuario.adm)
+@app.post("/usuarios/create/", response_model=UsuarioResponse)
+async def create_usuario(usuario: UsuarioCreateRequest):
+    atributos = usuario.model_dump(exclude_unset=True)
+    db_usuario = Usuario(**atributos)
     db.session.add(db_usuario)
     db.session.commit()
     return db_usuario
 
 
-@app.put("/usuarios/edit/{usuario_id}/", response_model=UsuarioEditSchema)
-async def edit_usuario(usuario_id: int, usuario: UsuarioEditSchema):
+@app.put("/usuarios/edit/{usuario_id}/", response_model=UsuarioResponse)
+async def edit_usuario(usuario_id: int, usuario: UsuarioUpdateRequest, usuario_logado: Usuario = Depends(get_usuario_logado)):
     db_usuario = db.session.query(Usuario).filter(Usuario.id == usuario_id).first()
     if db_usuario is None:
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
@@ -50,14 +54,27 @@ async def edit_usuario(usuario_id: int, usuario: UsuarioEditSchema):
     return db_usuario
 
 
+@app.post("/login")
+async def login(username: str = Form(...), password: str = Form(...)):
+    db_usuario = db.session.query(Usuario).filter(Usuario.email == username).first()
+    if not db_usuario or not verify_password(password, db_usuario.hash_password):
+        raise HTTPException(status_code=403,
+                            detail="Email ou nome de usuário incorretos"
+                           )
+    return {
+        "access_token": criar_token_jwt(db_usuario.id),
+        "token_type": "bearer",
+    }
+
+
 @app.get("/aeroportos/")
-async def aeroportos():
+async def aeroportos(usuario_logado: Usuario = Depends(get_usuario_logado)):
     aeroportos = db.session.query(Aeroporto).all()
     return aeroportos
 
 
 @app.post("/aeroportos/create/", response_model=AeroportoSchema)
-async def create_aeroporto(aeroporto: AeroportoSchema):
+async def create_aeroporto(aeroporto: AeroportoSchema, usuario_logado: Usuario = Depends(get_usuario_logado)):
     db_aeroporto = Aeroporto(nome=aeroporto.nome, cidade=aeroporto.cidade, pais=aeroporto.pais)
     db.session.add(db_aeroporto)
     db.session.commit()
@@ -65,7 +82,7 @@ async def create_aeroporto(aeroporto: AeroportoSchema):
 
 
 @app.put("/aeroportos/edit/{aeroporto_id}/", response_model=AeroportoEditSchema)
-async def edit_aeroporto(aeroporto_id: int, aeroporto: AeroportoEditSchema):
+async def edit_aeroporto(aeroporto_id: int, aeroporto: AeroportoEditSchema, usuario_logado: Usuario = Depends(get_usuario_logado)):
     db_aeroporto = db.session.query(Aeroporto).filter(Aeroporto.id == aeroporto_id).first()
     if db_aeroporto is None:
         raise HTTPException(status_code=404, detail="Aeroporto não encontrado")
@@ -80,7 +97,7 @@ async def edit_aeroporto(aeroporto_id: int, aeroporto: AeroportoEditSchema):
 
 
 @app.post("/pagar-reserva/", response_model=PagamentoSchema)
-async def pagar_reserva(pagamento: PagamentoSchema):
+async def pagar_reserva(pagamento: PagamentoSchema, usuario_logado: Usuario = Depends(get_usuario_logado)):
 
     reserva = db.session.query(Reserva).filter(Reserva.id == pagamento.reserva_id).first()
     if reserva is None:
@@ -99,13 +116,13 @@ async def pagar_reserva(pagamento: PagamentoSchema):
 
 
 @app.get("/voos/")
-async def voos():
+async def voos(usuario_logado: Usuario = Depends(get_usuario_logado)):
     voos = db.session.query(Voo).all()
     return voos
 
 
 @app.post("/voos/create/", response_model=VooSchema)
-async def create_voo(voo: VooSchema):
+async def create_voo(voo: VooSchema, usuario_logado: Usuario = Depends(get_usuario_logado)):
     db_voo = Voo(origem_id=voo.origem_id, destino_id=voo.destino_id, data_hora_partida=voo.data_hora_partida, capacidade=voo.capacidade, preco=voo.preco, numero_voo=voo.numero_voo)
     
     db.session.add(db_voo)
@@ -114,7 +131,7 @@ async def create_voo(voo: VooSchema):
 
 
 @app.put("/voos/edit/{voo_id}/", response_model=VooEditSchema)
-async def edit_usuario(voo_id: int, voo: VooEditSchema):
+async def edit_usuario(voo_id: int, voo: VooEditSchema, usuario_logado: Usuario = Depends(get_usuario_logado)):
     db_voo = db.session.query(Voo).filter(Voo.id == voo_id).first()
     if db_voo is None:
         raise HTTPException(status_code=404, detail="Voo não encontrado")
@@ -129,13 +146,13 @@ async def edit_usuario(voo_id: int, voo: VooEditSchema):
 
 
 @app.get("/reservas/")
-async def reservas():
+async def reservas(usuario_logado: Usuario = Depends(get_usuario_logado)):
     reservas = db.session.query(Reserva).all()
     return reservas
 
 
 @app.post("/reservas/create/", response_model=ReservaSchema)
-async def create_reserva(reserva: ReservaSchema):
+async def create_reserva(reserva: ReservaSchema, usuario_logado: Usuario = Depends(get_usuario_logado)):
     db_reserva = Reserva(usuario_id=reserva.usuario_id, voo_id=reserva.voo_id, data=reserva.data, status=reserva.status)
     db.session.add(db_reserva)
     db.session.commit()
@@ -143,7 +160,7 @@ async def create_reserva(reserva: ReservaSchema):
 
 
 @app.put("/reservas/edit/{reserva_id}/", response_model=ReservaEditSchema)
-async def edit_usuario(reserva_id: int, reserva: ReservaEditSchema):
+async def edit_usuario(reserva_id: int, reserva: ReservaEditSchema, usuario_logado: Usuario = Depends(get_usuario_logado)):
     db_reserva = db.session.query(Reserva).filter(Reserva.id == reserva_id).first()
     if db_reserva is None:
         raise HTTPException(status_code=404, detail="Reserva não encontrada")

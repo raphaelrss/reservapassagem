@@ -1,3 +1,5 @@
+import re
+from pydantic import validator
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Boolean, Float
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
@@ -13,7 +15,14 @@ class Usuario(Base):
     sobrenome = Column(String)
     email = Column(String)
     cpf = Column(String)
+    hash_password = Column(String)
     adm = Column(Boolean)
+
+    @validator('email')
+    def valida_formatacao_email(cls, v):
+        if not re.compile(r'([A-Za-z0-9]+[.-_])*[A-Za-z0-9]+@[A-Za-z0-9-]+(\.[A-Z|a-z]{2,})+').match(v):
+            raise ValueError('The user email format is invalid!')
+        return v
 
 
 class Aeroporto(Base):
