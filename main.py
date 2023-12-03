@@ -12,11 +12,22 @@ from schema import UsuarioCreateRequest, Usuario as UsuarioSchema, Aeroporto as 
 from schema import UsuarioEdit as UsuarioEditSchema, AeroportoEdit as AeroportoEditSchema, VooEdit as VooEditSchema, ReservaEdit as ReservaEditSchema
 from security import criar_token_jwt, verify_password
 
+from fastapi.middleware.cors import CORSMiddleware
+
+
 load_dotenv(".env")
 
 app = FastAPI()
 
 app.add_middleware(DBSessionMiddleware, db_url=os.environ["DATABASE_URL"])
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/")
