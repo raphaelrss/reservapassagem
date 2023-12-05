@@ -25,8 +25,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://reservas-de-passagens.biancacordeiro1.repl.co"],
     allow_credentials=True,
-    allow_methods=["https://reservas-de-passagens.biancacordeiro1.repl.co"],
-    allow_headers=["https://reservas-de-passagens.biancacordeiro1.repl.co"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
