@@ -21,9 +21,15 @@ app = FastAPI()
 
 app.add_middleware(DBSessionMiddleware, db_url=os.environ["DATABASE_URL"])
 
+origins = [
+    "https://reservas-de-passagens.biancacordeiro1.repl.co",
+    "*",
+    "https://reservapassagem.azurewebsites.net",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
