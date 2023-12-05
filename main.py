@@ -23,7 +23,7 @@ app.add_middleware(DBSessionMiddleware, db_url=os.environ["DATABASE_URL"])
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://reservas-de-passagens.biancacordeiro1.repl.co"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
