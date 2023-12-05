@@ -119,7 +119,7 @@ class VooEdit(BaseModel):
 class Reserva(BaseModel):
     usuario_id: int
     voo_id: int
-    data: datetime.datetime
+    data: Optional[datetime.datetime] = Field(None, description="Who sends the error message.")
     status: str
 
     class Config:

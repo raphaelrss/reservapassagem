@@ -1,3 +1,4 @@
+import datetime
 import os
 from typing import List
 
@@ -169,8 +170,9 @@ async def reservas():
 
 
 @app.post("/reservas/create/", response_model=ReservaSchema)
-async def create_reserva(reserva: ReservaSchema):
-    db_reserva = Reserva(usuario_id=reserva.usuario_id, voo_id=reserva.voo_id, data=reserva.data, status=reserva.status)
+async def create_reserva(reserva: ReservaSchema = None):
+    data = reserva.data or datetime.datetime.now()
+    db_reserva = Reserva(usuario_id=reserva.usuario_id, voo_id=reserva.voo_id, data=data, status=reserva.status)
     db.session.add(db_reserva)
     db.session.commit()
     return db_reserva
